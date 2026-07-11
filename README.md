@@ -163,6 +163,10 @@ GEMINI_API_KEY=
 6. Web Push subscribe + Vercel Cron expiry reminders
 7. Deploy to Vercel (add env vars there); polish mobile UX / PWA
 
+## Team
+
+See [TEAM.md](TEAM.md) for 4-person file ownership (to reduce merge conflicts).
+
 ## Status
 
 Early planning. Env scaffolding is in place; app code not started yet.
