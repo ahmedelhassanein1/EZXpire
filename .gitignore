@@ -19,3 +19,6 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
+.env.example
+testText.txt
+scripts/testGemini.ts
