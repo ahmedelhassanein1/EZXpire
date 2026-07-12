@@ -19,6 +19,6 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
-.env.example
+
+# local teammate scratch (optional)
 testText.txt
-scripts/testGemini.ts
