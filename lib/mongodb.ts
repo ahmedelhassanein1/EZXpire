@@ -5,12 +5,14 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-function getClientPromise(): Promise<MongoClient> {
+function createClientPromise(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error(
-      "MONGODB_URI is not set. Add your MongoDB Atlas connection string to .env."
+    return Promise.reject(
+      new Error(
+        "MONGODB_URI is not set. Add your MongoDB Atlas connection string to .env."
+      )
     );
   }
 
@@ -26,8 +28,22 @@ function getClientPromise(): Promise<MongoClient> {
   return client.connect();
 }
 
-/** Shared MongoClient promise (for Auth.js MongoDBAdapter). */
-export const clientPromise: Promise<MongoClient> = getClientPromise();
+/**
+ * Shared MongoClient promise (for Auth.js MongoDBAdapter).
+ * Lazily connects on first use so `next build` can import this module without MONGODB_URI.
+ */
+export const clientPromise: Promise<MongoClient> = {
+  then(onfulfilled, onrejected) {
+    return createClientPromise().then(onfulfilled, onrejected);
+  },
+  catch(onrejected) {
+    return createClientPromise().catch(onrejected);
+  },
+  finally(onfinally) {
+    return createClientPromise().finally(onfinally);
+  },
+  [Symbol.toStringTag]: "Promise",
+} as Promise<MongoClient>;
 
 /**
  * Returns the connected MongoDB database.
