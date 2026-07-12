@@ -59,6 +59,67 @@ export interface QueryGeminiOptions {
   systemInstruction?: string | null;
 }
 
+export interface ExtractTextFromImageOptions {
+  /** Override the default Gemini model. */
+  model?: string;
+  /**
+   * Override the extraction instruction sent alongside the image.
+   */
+  prompt?: string;
+}
+
+const DEFAULT_OCR_PROMPT =
+  "Extract every line of text visible in this receipt image. " +
+  "Return only the raw text, preserving the original line breaks, " +
+  "with one line per item. Do not add commentary, headings, or markdown.";
+
+/**
+ * Send an image to Gemini and return the plain-text OCR result.
+ *
+ * @param imageBase64 Base64-encoded image bytes (no data-URL prefix).
+ * @param mimeType    MIME type of the image, e.g. `image/jpeg` or `image/png`.
+ */
+export async function extractTextFromImage(
+  imageBase64: string,
+  mimeType: string = "image/jpeg",
+  options: ExtractTextFromImageOptions = {}
+): Promise<string> {
+  if (typeof imageBase64 !== "string" || imageBase64.length === 0) {
+    throw new Error(
+      "extractTextFromImage: imageBase64 must be a non-empty string."
+    );
+  }
+  if (typeof mimeType !== "string" || mimeType.length === 0) {
+    throw new Error("extractTextFromImage: mimeType must be a non-empty string.");
+  }
+
+  const client = getClient();
+
+  const response = await client.models.generateContent({
+    model: options.model ?? DEFAULT_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: options.prompt ?? DEFAULT_OCR_PROMPT },
+          {
+            inlineData: {
+              mimeType,
+              data: imageBase64,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const text = response.text;
+  if (typeof text !== "string" || text.length === 0) {
+    throw new Error("extractTextFromImage: Gemini returned an empty response.");
+  }
+  return text.trim();
+}
+
 /**
  * Send a single string prompt to the Gemini API and return the plain-text response.
  *
