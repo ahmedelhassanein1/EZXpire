@@ -10,15 +10,12 @@ import { clientPromise } from "@/lib/mongodb";
  * Required env:
  * - MONGODB_URI
  * - AUTH_SECRET (or NEXTAUTH_SECRET)
- * - GITHUB_ID
- * - GITHUB_SECRET
- *
- * Route handlers are added in Prompt 4 — do not import this from a route yet for handlers.
+ * - GITHUB_ID / GITHUB_SECRET
+ * - NEXTAUTH_URL (e.g. http://localhost:3000)
  */
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
-    // GitHub OAuth placeholder — set GITHUB_ID / GITHUB_SECRET in .env
     GitHubProvider({
       clientId: process.env.GITHUB_ID ?? "",
       clientSecret: process.env.GITHUB_SECRET ?? "",
