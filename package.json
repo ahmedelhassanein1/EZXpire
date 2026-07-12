@@ -11,9 +11,11 @@
     "test:gemini": "node --env-file=.env --conditions=react-server scripts/testGemini.ts"
   },
   "dependencies": {
+    "@auth/mongodb-adapter": "^3.11.2",
     "@google/genai": "^1.0.0",
     "mongodb": "^7.5.0",
     "next": "^15.5.20",
+    "next-auth": "^4.24.14",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "server-only": "^0.0.1",
