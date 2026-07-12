@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Tesseract workers / WASM may be added by Person 2 later
+  // Include root prompt file in serverless bundles (Vercel does not
+  // auto-trace loose .txt reads via process.cwd()).
+  outputFileTracingIncludes: {
+    "/api/parse-receipt": ["./QueryPrompt.txt"],
+  },
 };
 
 export default nextConfig;

@@ -1,9 +1,9 @@
 import "server-only";
 
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { GoogleGenAI } from "@google/genai";
+
 const DEFAULT_MODEL = "gemini-3.5-flash";
 
 /**
@@ -126,11 +126,8 @@ export function sniffImageMime(bytes: Uint8Array): string | null {
   return null;
 }
 
-const SYSTEM_INSTRUCTION_PATH = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "QueryPrompt.txt"
-);
+/** Project-root path — works on Vercel when the file is in the deploy + traced. */
+const SYSTEM_INSTRUCTION_PATH = resolve(process.cwd(), "QueryPrompt.txt");
 
 let cachedClient: GoogleGenAI | null = null;
 let cachedSystemInstruction: Promise<string> | null = null;
@@ -151,8 +148,8 @@ function getClient(): GoogleGenAI {
 
 function loadDefaultSystemInstruction(): Promise<string> {
   if (!cachedSystemInstruction) {
-    cachedSystemInstruction = readFile(SYSTEM_INSTRUCTION_PATH, "utf8").then(
-      (contents) => {
+    cachedSystemInstruction = readFile(SYSTEM_INSTRUCTION_PATH, "utf8")
+      .then((contents) => {
         const trimmed = contents.trim();
         if (trimmed.length === 0) {
           throw new Error(
@@ -160,8 +157,14 @@ function loadDefaultSystemInstruction(): Promise<string> {
           );
         }
         return trimmed;
-      }
-    );
+      })
+      .catch((err) => {
+        const detail = err instanceof Error ? err.message : String(err);
+        throw new Error(
+          `Could not read QueryPrompt.txt from ${SYSTEM_INSTRUCTION_PATH}. ` +
+            `Keep the file at the repo root (exact casing) and redeploy. (${detail})`
+        );
+      });
     cachedSystemInstruction.catch(() => {
       cachedSystemInstruction = null;
     });
