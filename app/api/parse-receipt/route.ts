@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+﻿import { NextResponse } from "next/server";
+
+import { extractTextFromImage } from "@/lib/gemini";
+=======
 import { NextResponse } from "next/server";
 
 import {
@@ -37,6 +42,7 @@ async function parseOcrText(text: string): Promise<{
     return { parsed: null, parseError: message };
   }
 }
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
 
 export const runtime = "nodejs";
 
@@ -48,6 +54,25 @@ type JsonBody = {
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 /**
+<<<<<<< HEAD
+ * POST /api/parse-receipt
+ *
+ * Accepts a receipt image and returns the OCR'd text as a plain string.
+ *
+ * Request body (either):
+ *   - multipart/form-data with an `image` file field
+ *   - application/json with `{ imageBase64: string, mimeType?: string }`
+ *
+ * Response: `{ text: string }`
+ */
+export async function POST(request: Request) {
+  try {
+    const { imageBase64, mimeType } = await readImagePayload(request);
+
+    if (!imageBase64) {
+      return NextResponse.json(
+        { error: "No image provided. Send an 'image' file or 'imageBase64' field." },
+=======
  * GET /api/parse-receipt
  *
  * Cheap diagnostic. Returns Gemini config sanity info (no network calls,
@@ -101,10 +126,25 @@ export async function POST(request: Request) {
           error: "No image provided. Send an 'image' file or 'imageBase64' field.",
           ...(debug ? { meta: { payloadSource, elapsedMs: Date.now() - startedAt } } : {}),
         },
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
         { status: 400 }
       );
     }
 
+<<<<<<< HEAD
+    const text = await extractTextFromImage(imageBase64, mimeType);
+    return NextResponse.json({ text });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to parse receipt";
+    const status = message.startsWith("GEMINI_API_KEY") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+async function readImagePayload(
+  request: Request
+): Promise<{ imageBase64: string | null; mimeType: string }> {
+=======
     if (!SUPPORTED_IMAGE_MIME_TYPES.has(mimeType.toLowerCase())) {
       return NextResponse.json(
         {
@@ -193,13 +233,18 @@ interface ReadImagePayload {
 }
 
 async function readImagePayload(request: Request): Promise<ReadImagePayload> {
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
     const file = formData.get("image");
     if (!(file instanceof File)) {
+<<<<<<< HEAD
+      return { imageBase64: null, mimeType: "image/jpeg" };
+=======
       return { imageBase64: null, mimeType: "image/jpeg", payloadSource: "multipart" };
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
     }
     if (file.size > MAX_IMAGE_BYTES) {
       throw new Error(
@@ -207,6 +252,23 @@ async function readImagePayload(request: Request): Promise<ReadImagePayload> {
       );
     }
     const buffer = Buffer.from(await file.arrayBuffer());
+<<<<<<< HEAD
+    return {
+      imageBase64: buffer.toString("base64"),
+      mimeType: file.type || "image/jpeg",
+    };
+  }
+
+  const body = (await request.json().catch(() => null)) as JsonBody | null;
+  if (!body?.imageBase64) {
+    return { imageBase64: null, mimeType: "image/jpeg" };
+  }
+  const stripped = body.imageBase64.replace(/^data:[^;]+;base64,/, "");
+  return {
+    imageBase64: stripped,
+    mimeType: body.mimeType ?? "image/jpeg",
+  };
+=======
     const firstBytes = new Uint8Array(
       buffer.buffer,
       buffer.byteOffset,
@@ -249,4 +311,5 @@ async function readImagePayload(request: Request): Promise<ReadImagePayload> {
   }
 
   return { imageBase64: null, mimeType: "image/jpeg", payloadSource: "unknown" };
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
 }

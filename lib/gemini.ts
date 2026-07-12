@@ -203,6 +203,8 @@ const DEFAULT_OCR_PROMPT =
   "with one line per item. Do not add commentary, headings, or markdown.";
 
 /**
+<<<<<<< HEAD
+=======
  * Diagnostic metadata returned alongside the OCR text from
  * `extractTextFromImageDebug`. Useful for surfacing what actually happened
  * inside the Gemini call when something goes wrong.
@@ -227,6 +229,7 @@ export interface ExtractTextDebugResult {
 }
 
 /**
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
  * Send an image to Gemini and return the plain-text OCR result.
  *
  * @param imageBase64 Base64-encoded image bytes (no data-URL prefix).
@@ -237,6 +240,8 @@ export async function extractTextFromImage(
   mimeType: string = "image/jpeg",
   options: ExtractTextFromImageOptions = {}
 ): Promise<string> {
+<<<<<<< HEAD
+=======
   const { text } = await extractTextFromImageDebug(imageBase64, mimeType, options);
   return text;
 }
@@ -254,12 +259,43 @@ export async function extractTextFromImageDebug(
   mimeType: string = "image/jpeg",
   options: ExtractTextFromImageOptions = {}
 ): Promise<ExtractTextDebugResult> {
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
   if (typeof imageBase64 !== "string" || imageBase64.length === 0) {
     throw new Error(
       "extractTextFromImage: imageBase64 must be a non-empty string."
     );
   }
   if (typeof mimeType !== "string" || mimeType.length === 0) {
+<<<<<<< HEAD
+    throw new Error("extractTextFromImage: mimeType must be a non-empty string.");
+  }
+
+  const client = getClient();
+
+  const response = await client.models.generateContent({
+    model: options.model ?? DEFAULT_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: options.prompt ?? DEFAULT_OCR_PROMPT },
+          {
+            inlineData: {
+              mimeType,
+              data: imageBase64,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const text = response.text;
+  if (typeof text !== "string" || text.length === 0) {
+    throw new Error("extractTextFromImage: Gemini returned an empty response.");
+  }
+  return text.trim();
+=======
     throw new Error(
       "extractTextFromImage: mimeType must be a non-empty string."
     );
@@ -374,6 +410,7 @@ export function checkGeminiConfig(): GeminiConfigCheck {
     defaultModelIsKnown,
     warnings,
   };
+>>>>>>> 8dada4f3ad8c5210735473dfbb693a76cd6f8d58
 }
 
 /**
