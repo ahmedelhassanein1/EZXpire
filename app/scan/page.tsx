@@ -120,13 +120,27 @@ export default function ScanPage() {
     setDrafts((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const addManualItem = () => {
+    setError(null);
+    setSaveMessage(null);
+    setDrafts((prev) => [
+      ...prev,
+      {
+        id: `manual-${Date.now()}-${prev.length}`,
+        name: "",
+        days: 7,
+      },
+    ]);
+  };
+
   const saveToPantry = async () => {
     if (!signedIn) {
       setError("Sign in first so items can be saved to your pantry.");
       return;
     }
-    if (drafts.length === 0) {
-      setError("Nothing to save. Extract a receipt first.");
+    const toSave = drafts.filter((d) => d.name.trim().length > 0);
+    if (toSave.length === 0) {
+      setError("Add at least one item with a name before saving.");
       return;
     }
 
@@ -138,13 +152,13 @@ export default function ScanPage() {
     let saved = 0;
     const failures: string[] = [];
 
-    for (const draft of drafts) {
+    for (const draft of toSave) {
       try {
         const res = await fetch("/api/pantry", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: draft.name,
+            name: draft.name.trim(),
             category: "grocery",
             purchaseDate,
             expiresAt: addDaysIso(draft.days),
@@ -167,7 +181,7 @@ export default function ScanPage() {
 
     if (saved > 0) {
       setSaveMessage(`Saved ${saved} item${saved === 1 ? "" : "s"} to your pantry.`);
-      setDrafts([]);
+      setDrafts((prev) => prev.filter((d) => !d.name.trim()));
     }
     if (failures.length > 0) {
       setError(failures.slice(0, 3).join(" · "));
@@ -175,8 +189,12 @@ export default function ScanPage() {
   };
 
   const canSave = useMemo(
-    () => signedIn && drafts.length > 0 && !busy && !saving,
-    [signedIn, drafts.length, busy, saving]
+    () =>
+      signedIn &&
+      drafts.some((d) => d.name.trim().length > 0) &&
+      !busy &&
+      !saving,
+    [signedIn, drafts, busy, saving]
   );
 
   return (
@@ -242,6 +260,15 @@ export default function ScanPage() {
         Extract items from image
       </button>
 
+      <button
+        type="button"
+        disabled={busy || saving}
+        onClick={addManualItem}
+        className="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-ink shadow-sm ring-1 ring-ink/10 disabled:opacity-50"
+      >
+        Add item manually
+      </button>
+
       {drafts.length > 0 ? (
         <section className="space-y-3 rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-ink/5">
           <div className="flex items-baseline justify-between gap-2">
@@ -256,6 +283,7 @@ export default function ScanPage() {
                   onChange={(e) => updateDraft(item.id, { name: e.target.value })}
                   className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm outline-none ring-leaf/30 focus:ring"
                   aria-label="Item name"
+                  placeholder="Item name"
                 />
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-ink/55">Days until expiry</label>
@@ -279,6 +307,14 @@ export default function ScanPage() {
               </li>
             ))}
           </ul>
+          <button
+            type="button"
+            disabled={busy || saving}
+            onClick={addManualItem}
+            className="w-full rounded-full border border-dashed border-leaf/40 bg-mist/50 px-4 py-2.5 text-sm font-semibold text-leaf"
+          >
+            + Add another item
+          </button>
           <button
             type="button"
             disabled={!canSave}
