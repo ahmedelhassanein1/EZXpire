@@ -36,7 +36,5 @@ export const clientPromise: Promise<MongoClient> = getClientPromise();
 export async function connectToDatabase(): Promise<Db> {
   const client = await clientPromise;
   const dbName = process.env.MONGODB_DB;
-  const db = dbName ? client.db(dbName) : client.db();
-  console.log("Connected");
-  return db;
+  return dbName ? client.db(dbName) : client.db();
 }

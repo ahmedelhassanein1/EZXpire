@@ -1,12 +1,15 @@
-import { ObjectId } from "mongodb";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import {
+  PANTRY_COLLECTION,
+  docToPantryItem,
+  errorMessage,
+  parseDate,
+  parsePantryObjectId,
+  requireUserId,
+} from "@/lib/pantryHelpers";
 import type { PantryItem } from "@/lib/types";
-
-const PANTRY_COLLECTION = "pantryItems";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -19,35 +22,29 @@ type UpdatePantryBody = {
   expiresAt?: unknown;
 };
 
-function parseDate(value: unknown, field: string): Date {
-  if (typeof value !== "string" && !(value instanceof Date)) {
-    throw new Error(`${field} must be a date string (YYYY-MM-DD or ISO).`);
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(`${field} is not a valid date.`);
-  }
-  return date;
-}
-
 /** PATCH /api/pantry/[id] — update an item owned by the signed-in user. */
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireUserId();
+    if ("error" in auth) return auth.error;
 
     const { id } = await context.params;
-    if (!ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid item id" }, { status: 400 });
+    const objectId = parsePantryObjectId(id);
+    if (!objectId) {
+      return NextResponse.json(
+        { error: "Invalid item id. Expected a MongoDB ObjectId." },
+        { status: 400 }
+      );
     }
 
     let body: UpdatePantryBody;
     try {
       body = (await request.json()) as UpdatePantryBody;
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body. Send application/json." },
+        { status: 400 }
+      );
     }
 
     const updates: Record<string, unknown> = {};
@@ -83,42 +80,37 @@ export async function PATCH(request: Request, context: RouteContext) {
         updates.expiresAt = parseDate(body.expiresAt, "expiresAt");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Invalid dates";
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessage(err, "Invalid dates") },
+        { status: 400 }
+      );
     }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
-        { error: "Provide at least one field to update" },
+        { error: "Provide at least one field to update (name, category, purchaseDate, expiresAt)." },
         { status: 400 }
       );
     }
 
     const db = await connectToDatabase();
     const result = await db.collection(PANTRY_COLLECTION).findOneAndUpdate(
-      { _id: new ObjectId(id), userId: session.user.id },
+      { _id: objectId, userId: auth.userId },
       { $set: updates },
       { returnDocument: "after" }
     );
 
     if (!result) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pantry item not found for this account." },
+        { status: 404 }
+      );
     }
 
-    const item: PantryItem = {
-      _id: result._id.toString(),
-      userId: result.userId as string,
-      name: result.name as string,
-      category: result.category as string,
-      purchaseDate: result.purchaseDate as Date,
-      expiresAt: result.expiresAt as Date,
-      createdAt: result.createdAt as Date | undefined,
-    };
-
+    const item: PantryItem = docToPantryItem(result);
     return NextResponse.json(item);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to update pantry item";
+    const message = errorMessage(err, "Failed to update pantry item");
     console.error("PATCH /api/pantry/[id]:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -127,30 +119,34 @@ export async function PATCH(request: Request, context: RouteContext) {
 /** DELETE /api/pantry/[id] — delete an item owned by the signed-in user. */
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireUserId();
+    if ("error" in auth) return auth.error;
 
     const { id } = await context.params;
-    if (!ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid item id" }, { status: 400 });
+    const objectId = parsePantryObjectId(id);
+    if (!objectId) {
+      return NextResponse.json(
+        { error: "Invalid item id. Expected a MongoDB ObjectId." },
+        { status: 400 }
+      );
     }
 
     const db = await connectToDatabase();
     const result = await db.collection(PANTRY_COLLECTION).deleteOne({
-      _id: new ObjectId(id),
-      userId: session.user.id,
+      _id: objectId,
+      userId: auth.userId,
     });
 
     if (result.deletedCount !== 1) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pantry item not found for this account." },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to delete pantry item";
+    const message = errorMessage(err, "Failed to delete pantry item");
     console.error("DELETE /api/pantry/[id]:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
