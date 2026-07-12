@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ChangeEvent } from "react";
 
 type CameraCaptureProps = {
   onCapture: (file: File) => void;
@@ -17,7 +17,7 @@ export function CameraCapture({
 }: CameraCaptureProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
