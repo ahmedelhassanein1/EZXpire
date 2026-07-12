@@ -89,7 +89,7 @@ export async function queryGemini(
   });
 
   let text = response.text;
-  console.log("unparsed: ", text);
+  console.log("unparsed: \n", text);
   if (typeof text !== "string" || text.length === 0) {
     throw new Error("queryGemini: Gemini returned an empty response.");
   }
