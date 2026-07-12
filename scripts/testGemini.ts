@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
+// @ts-expect-error Node runs this with `--experimental-strip-types`, which
+// requires the explicit `.ts` extension; tsc (without
+// `allowImportingTsExtensions`) rejects it. The script is not part of the
+// Next.js build, so this cost is contained.
 import { queryGemini } from "../lib/gemini.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

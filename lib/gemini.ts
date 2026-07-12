@@ -91,25 +91,18 @@ export async function queryGemini(
   if (typeof text !== "string" || text.length === 0) {
     throw new Error("queryGemini: Gemini returned an empty response.");
   }
-  // Parse the response text line by line.
-  // For each line, if it contains an integer, save [firstWord, maxIntOnThatLine] as a pair.
-  // Collect all such pairs into an array.
+  // Gemini is prompted (see QueryPrompt.txt) to return one item per line in the
+  // form "ITEM - DAYS". Capture the item name (possibly multiple words) and the
+  // trailing integer day count; ignore any line that doesn't match.
+  const LINE_RE = /^\s*(.+?)\s*[-\u2013\u2014]\s*(\d+)\s*$/;
   const results: [string, number][] = [];
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const tokens = line.trim().split(/\s+/);
-    if (tokens.length === 0 || tokens[0] === "") continue;
-    const numbersInLine = line.match(/-?\d+/g);
-    if (numbersInLine) {
-      const intNumbers = numbersInLine.map(Number);
-      const maxInt = Math.max(...intNumbers);
-      results.push([tokens[0], maxInt]);
-    }
+  for (const line of text.split("\n")) {
+    const m = line.match(LINE_RE);
+    if (!m) continue;
+    results.push([m[1], Number(m[2])]);
   }
-  // Return as an object with two arrays: firstWords and corresponding max numbers.
   return JSON.stringify({
-    firstWords: results.map(([word, _]) => word),
-    maxInts: results.map(([_, num]) => num),
+    firstWords: results.map(([word]) => word),
+    maxInts: results.map(([, num]) => num),
   });
-
 }
