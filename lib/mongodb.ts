@@ -26,12 +26,15 @@ function getClientPromise(): Promise<MongoClient> {
   return client.connect();
 }
 
+/** Shared MongoClient promise (for Auth.js MongoDBAdapter). */
+export const clientPromise: Promise<MongoClient> = getClientPromise();
+
 /**
  * Returns the connected MongoDB database.
  * Uses a cached client in development to avoid exhausting connections on hot reload.
  */
 export async function connectToDatabase(): Promise<Db> {
-  const client = await getClientPromise();
+  const client = await clientPromise;
   const dbName = process.env.MONGODB_DB;
   const db = dbName ? client.db(dbName) : client.db();
   console.log("Connected");
