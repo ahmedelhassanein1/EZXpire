@@ -3,9 +3,7 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-
 import { GoogleGenAI } from "@google/genai";
-
 const DEFAULT_MODEL = "gemini-3.5-flash";
 
 const SYSTEM_INSTRUCTION_PATH = resolve(
