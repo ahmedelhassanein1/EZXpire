@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { EnableNotifications } from "@/components/EnableNotifications";
 import { PantryList } from "@/components/PantryList";
+import type { PantryItemUpdate } from "@/components/ItemRow";
 import { demoPantryItems, type PantryItem } from "@/lib/pantry-ui";
 
 function normalizeItems(payload: unknown): PantryItem[] {
@@ -39,9 +40,6 @@ export default function HomePage() {
       if (!res.ok) throw new Error("pantry unavailable");
       const data = await res.json();
       const list = normalizeItems(Array.isArray(data) ? data : data.items);
-      if (list.length === 0 && !Array.isArray(data) && !data.items) {
-        throw new Error("empty shape");
-      }
       setItems(list);
       setSource("api");
     } catch {
@@ -62,8 +60,57 @@ export default function HomePage() {
     try {
       await fetch(`/api/pantry/${id}`, { method: "DELETE" });
     } catch {
-      // Person 1 API may not be ready; UI already updated optimistically.
+      // Keep optimistic UI; list reloads on next visit.
     }
+  };
+
+  const onUpdate = async (id: string, patch: PantryItemUpdate) => {
+    if (source !== "api") {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                name: patch.name ?? item.name,
+                category: patch.category ?? item.category,
+                expiresAt: patch.expiresAt ?? item.expiresAt,
+              }
+            : item
+        )
+      );
+      return;
+    }
+
+    const res = await fetch(`/api/pantry/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const body = (await res.json().catch(() => null)) as
+      | { error?: string; name?: string; category?: string; expiresAt?: string; _id?: string }
+      | null;
+
+    if (!res.ok) {
+      throw new Error(body?.error ?? "Failed to update item");
+    }
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const expiresAt =
+          body?.expiresAt != null
+            ? String(body.expiresAt)
+            : patch.expiresAt ?? item.expiresAt;
+        return {
+          ...item,
+          name: body?.name ? String(body.name) : patch.name ?? item.name,
+          category: body?.category
+            ? String(body.category)
+            : patch.category ?? item.category,
+          expiresAt,
+        };
+      })
+    );
   };
 
   return (
@@ -86,7 +133,7 @@ export default function HomePage() {
               <code className="font-mono">/api/pantry</code> is available.
             </p>
           ) : null}
-          <PantryList items={items} onDelete={onDelete} />
+          <PantryList items={items} onDelete={onDelete} onUpdate={onUpdate} />
         </>
       )}
 

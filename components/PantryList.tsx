@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { ItemRow } from "@/components/ItemRow";
+import { ItemRow, type PantryItemUpdate } from "@/components/ItemRow";
 import { daysUntilExpiry, type PantryItem } from "@/lib/pantry-ui";
 
 type PantryListProps = {
   items: PantryItem[];
   onDelete?: (id: string) => void;
+  onUpdate?: (id: string, patch: PantryItemUpdate) => Promise<void> | void;
 };
 
-export function PantryList({ items, onDelete }: PantryListProps) {
+export function PantryList({ items, onDelete, onUpdate }: PantryListProps) {
   const sorted = useMemo(
     () =>
       [...items].sort(
@@ -42,7 +43,12 @@ export function PantryList({ items, onDelete }: PantryListProps) {
       </div>
       <ul>
         {sorted.map((item) => (
-          <ItemRow key={item.id} item={item} onDelete={onDelete} />
+          <ItemRow
+            key={item.id}
+            item={item}
+            onDelete={onDelete}
+            onUpdate={onUpdate}
+          />
         ))}
       </ul>
     </section>
